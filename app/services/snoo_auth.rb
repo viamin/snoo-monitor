@@ -76,6 +76,8 @@ class SnooAuth
     when Array
       body
     when Hash
+      return normalize_devices_response(body.values.first) if wrapper_hash?(body)
+
       %w[devices items data result payload].each do |key|
         next unless body.key?(key)
 
@@ -92,5 +94,12 @@ class SnooAuth
 
   def device_payload?(payload)
     payload.key?("serialNumber") || payload.key?("awsIoT")
+  end
+
+  def wrapper_hash?(payload)
+    return false unless payload.size == 1
+
+    value = payload.values.first
+    value.is_a?(Array) || value.is_a?(Hash)
   end
 end
