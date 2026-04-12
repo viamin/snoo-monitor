@@ -140,25 +140,44 @@ class SnooMqttListener
     data = raw.is_a?(String) ? JSON.parse(raw) : raw
     Rails.logger.info "[SnooMQTT] Event received: #{data.inspect}"
 
-    state_machine = data["state_machine"] || data.dig("stateMachine") || {}
+    activity_state = data["activityState"] || data["activity_state"] || data
+    state_machine = activity_state["state_machine"] || activity_state["stateMachine"] || data["state_machine"] || data["stateMachine"] || {}
 
     event = SnooEvent.create!(
-      device_serial: @thing_name,
-      event_type: data["event"] || data["eventType"] || "status",
-      state: state_machine["state"] || data["state"],
-      level: state_machine["level"] || state_machine["state"],
-      hold: state_machine["hold"] == "on",
-      left_clip: (data["left_safety_clip"].to_i == 1),
-      right_clip: (data["right_safety_clip"].to_i == 1),
-      sticky_white_noise: state_machine["sticky_white_noise"] == "on",
-      sw_version: data["sw_version"] || data["swVersion"],
+      device_serial: data["serialNumber"] || @thing_name,
+      event_type: activity_state["event"] || activity_state["eventType"] || data["event"] || data["eventType"] || "status",
+      state: state_machine["state"] || activity_state["state"] || data["state"],
+      level: state_machine["level"] || normalize_level(state_machine["state"] || activity_state["state"] || data["state"]),
+      hold: truthy_state?(state_machine["hold"]),
+      left_clip: truthy_clip?(activity_state["left_safety_clip"] || activity_state["leftSafetyClip"] || data["left_safety_clip"] || data["leftSafetyClip"]),
+      right_clip: truthy_clip?(activity_state["right_safety_clip"] || activity_state["rightSafetyClip"] || data["right_safety_clip"] || data["rightSafetyClip"]),
+      sticky_white_noise: truthy_state?(state_machine["sticky_white_noise"] || state_machine["stickyWhiteNoise"]),
+      sw_version: activity_state["sw_version"] || activity_state["swVersion"] || data["sw_version"] || data["swVersion"] || data["firmwareVersion"],
       raw_payload: raw.is_a?(String) ? raw : raw.to_json,
-      event_time: data["event_time_ms"] ? Time.at(data["event_time_ms"].to_i / 1000.0) : Time.current
+      event_time: event_time_for(activity_state, data)
     )
 
     @on_event&.call(event)
   rescue => e
     Rails.logger.error "[SnooMQTT] Failed to process message: #{e.message}"
+  end
+
+  def event_time_for(activity_state, data)
+    timestamp_ms = activity_state["event_time_ms"] || activity_state["eventTimeMs"] || data["event_time_ms"] || data["eventTimeMs"]
+    timestamp_ms ? Time.at(timestamp_ms.to_i / 1000.0) : Time.current
+  end
+
+  def truthy_state?(value)
+    value.to_s == "on" || value.to_s == "true"
+  end
+
+  def truthy_clip?(value)
+    value.to_s == "1" || value == true
+  end
+
+  def normalize_level(state)
+    match = state.to_s.match(/\ALEVEL(\d+)\z/)
+    match ? match[1] : state
   end
 
   def fetch_poll_payload(conn)
