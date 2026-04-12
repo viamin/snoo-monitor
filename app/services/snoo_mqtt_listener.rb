@@ -27,6 +27,7 @@ class SnooMqttListener
     @thread = nil
     @thing_name = device.dig("awsIoT", "thingName") || device["serialNumber"]
     @endpoint = device.dig("awsIoT", "clientEndpoint")
+    @device_identifier = device["serialNumber"] || device["deviceId"] || device["id"] || @thing_name
   end
 
   def start(&on_event)
@@ -118,18 +119,17 @@ class SnooMqttListener
           f.headers["Authorization"] = "Bearer #{@auth.id_token}"
         end
 
-        # Try to get device status
-        resp = conn.get("/hds/me/v11/devices/#{@device['serialNumber']}/state")
+        payload_data = fetch_poll_payload(conn)
 
-        if resp.success? && resp.body.present?
-          payload = resp.body.to_json
+        if payload_data.present?
+          payload = payload_data.to_json
           if payload != last_payload
             last_payload = payload
-            process_message(payload)
+            process_message(payload_data)
           end
         end
       rescue => e
-        Rails.logger.warn "[SnooMQTT] Poll error: #{e.message}"
+      Rails.logger.warn "[SnooMQTT] Poll error: #{e.message}"
       end
 
       sleep POLL_INTERVAL
@@ -159,5 +159,63 @@ class SnooMqttListener
     @on_event&.call(event)
   rescue => e
     Rails.logger.error "[SnooMQTT] Failed to process message: #{e.message}"
+  end
+
+  def fetch_poll_payload(conn)
+    payload = fetch_state_payload(conn)
+    return payload if payload.present?
+
+    devices_resp = conn.get("/hds/me/v11/devices")
+    unless devices_resp.success?
+      Rails.logger.warn "[SnooMQTT] Device list poll failed: HTTP #{devices_resp.status}"
+      return nil
+    end
+
+    devices = unwrap_device_list(devices_resp.body)
+    device_payload = devices.find { |candidate| same_device?(candidate) }
+
+    unless device_payload
+      Rails.logger.warn "[SnooMQTT] Device #{@thing_name} not found in polled device list"
+      return nil
+    end
+
+    device_payload
+  end
+
+  def fetch_state_payload(conn)
+    return nil if @device_identifier.blank?
+
+    resp = conn.get("/hds/me/v11/devices/#{@device_identifier}/state")
+    return resp.body if resp.success? && resp.body.present?
+
+    Rails.logger.warn "[SnooMQTT] State poll failed for #{@device_identifier}: HTTP #{resp.status}"
+    nil
+  end
+
+  def unwrap_device_list(body)
+    case body
+    when Array
+      body
+    when Hash
+      return [body] if same_device?(body)
+
+      body.each_value do |value|
+        unwrapped = unwrap_device_list(value)
+        return unwrapped if unwrapped.present?
+      end
+
+      []
+    else
+      []
+    end
+  end
+
+  def same_device?(payload)
+    return false unless payload.is_a?(Hash)
+
+    candidate_thing_name = payload.dig("awsIoT", "thingName")
+    candidate_serial = payload["serialNumber"] || payload["deviceId"] || payload["id"]
+
+    candidate_thing_name == @thing_name || candidate_serial == @device_identifier
   end
 end
