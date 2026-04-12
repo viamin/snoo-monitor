@@ -1,0 +1,43 @@
+<tr class="border-b border-gray-100 hover:bg-blue-50 cursor-pointer event-row"
+    data-action="click->snoo#showPayload"
+    data-raw="<%= event.raw_payload %>">
+  <td class="py-2 px-3 whitespace-nowrap font-mono text-xs">
+    <%= event.event_time&.strftime("%H:%M:%S.%L") %>
+  </td>
+  <td class="py-2 px-3">
+    <span class="px-2 py-0.5 rounded text-xs font-medium
+      <%= case event.event_type
+          when 'cry' then 'bg-yellow-100 text-yellow-800'
+          when 'safety_clip' then 'bg-red-100 text-red-800'
+          when 'command' then 'bg-blue-100 text-blue-800'
+          when 'timer' then 'bg-purple-100 text-purple-800'
+          when 'power' then 'bg-orange-100 text-orange-800'
+          else 'bg-gray-100 text-gray-800'
+          end %>">
+      <%= event.event_type %>
+    </span>
+  </td>
+  <td class="py-2 px-3 font-medium"><%= event.state %></td>
+  <td class="py-2 px-3"><%= event.level %></td>
+  <td class="py-2 px-3">
+    <% if event.hold %>
+      <span class="text-orange-600 font-bold">HOLD</span>
+    <% end %>
+  </td>
+  <td class="py-2 px-3">
+    <span class="<%= event.left_clip ? 'text-green-600' : 'text-red-600' %>">
+      <%= event.left_clip ? "OK" : "OPEN" %>
+    </span>
+  </td>
+  <td class="py-2 px-3">
+    <span class="<%= event.right_clip ? 'text-green-600' : 'text-red-600' %>">
+      <%= event.right_clip ? "OK" : "OPEN" %>
+    </span>
+  </td>
+  <td class="py-2 px-3">
+    <% if event.sticky_white_noise %>
+      <span class="text-blue-600">ON</span>
+    <% end %>
+  </td>
+  <td class="py-2 px-3 text-xs text-gray-500"><%= event.sw_version %></td>
+</tr>
