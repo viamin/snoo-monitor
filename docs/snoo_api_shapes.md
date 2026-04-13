@@ -4,6 +4,8 @@ Reference for the Snoo endpoints inspected from this app on April 12, 2026.
 
 These shapes were confirmed by running `rails runner` with the app's stored Snoo credentials and inspecting the JSON returned by the API.
 
+All example values below are redacted placeholders. Treat the examples as key/type references, not literal production values.
+
 ## `GET /us/me/v10/settings`
 
 Global account-level settings.
@@ -53,7 +55,7 @@ Example shape:
         "id": "picture_id",
         "mime": "image/png",
         "encoded": false,
-        "updatedAt": "2026-03-13T05:41:56.424Z"
+        "updatedAt": "YYYY-MM-DDTHH:MM:SS.sssZ"
       }
     ],
     "breathSettingHistory": [],
@@ -134,7 +136,7 @@ Live event payloads currently observed by `SnooMqttListener` have this shape:
     "since": "YYYY-MM-DDTHH:MM:SS.sssZ"
   },
   "awsIoT": {
-    "thingName": "family_device_thing_name",
+    "thingName": "aws_iot_thing_name",
     "clientEndpoint": "example-ats.iot.us-east-1.amazonaws.com",
     "awsRegion": "us-east-1",
     "clientReady": true
@@ -166,7 +168,7 @@ Live event payloads currently observed by `SnooMqttListener` have this shape:
     "system_state": "normal"
   },
   "lastSSID": {
-    "name": "WiFi Name",
+    "name": "wifi_name",
     "updatedAt": "YYYY-MM-DDTHH:MM:SS.sssZ"
   },
   "provisionedAt": "YYYY-MM-DDTHH:MM:SS.sssZ"
