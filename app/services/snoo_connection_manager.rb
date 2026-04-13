@@ -68,10 +68,15 @@ class SnooConnectionManager
   private
 
   def broadcast_event(event)
+    previous_event = SnooEvent
+      .where("event_time < ? OR (event_time = ? AND id < ?)", event.event_time, event.event_time, event.id)
+      .order(event_time: :desc, id: :desc)
+      .first
+
     ActionCable.server.broadcast("snoo_events", {
       html: ApplicationController.render(
         partial: "dashboard/event_row",
-        locals: { event: event }
+        locals: { event: event, previous_event: previous_event }
       )
     })
 

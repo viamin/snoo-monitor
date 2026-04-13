@@ -2,12 +2,18 @@
     data-action="click->snoo#showPayload"
     data-raw="<%= event.raw_payload %>">
   <% display_time = event.event_time&.in_time_zone %>
+  <% gap_seconds = if event.event_time && previous_event&.event_time
+                     (event.event_time - previous_event.event_time).to_i
+                   end %>
   <td class="py-2 px-3 whitespace-nowrap text-xs" title="<%= display_time&.strftime("%Y-%m-%d %H:%M:%S.%L %Z") %>">
     <%= if display_time
           display_time.to_date == Time.zone.today ? display_time.strftime("%-l:%M:%S %p") : display_time.strftime("%b %-d, %-l:%M %p")
         else
           "-"
         end %>
+  </td>
+  <td class="py-2 px-3 whitespace-nowrap text-xs text-gray-500" title="<%= gap_seconds&.positive? ? "#{gap_seconds}s since prior event" : nil %>">
+    <%= event_gap_label(event, previous_event) %>
   </td>
   <td class="py-2 px-3">
     <span class="px-2 py-0.5 rounded text-xs font-medium
@@ -48,5 +54,4 @@
       <span class="text-gray-400">OFF</span>
     <% end %>
   </td>
-  <td class="py-2 px-3 text-xs text-gray-500"><%= event.resolved_sw_version %></td>
 </tr>
