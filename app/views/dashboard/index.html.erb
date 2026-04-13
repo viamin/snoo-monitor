@@ -46,6 +46,16 @@
     <% end %>
   </div>
 
+  <!-- Device Settings -->
+  <div class="bg-white shadow rounded-lg p-6 mb-6">
+    <h2 class="text-xl font-semibold mb-4">Device Settings</h2>
+    <% if @device_settings || @latest %>
+      <%= render partial: "dashboard/device_settings", locals: { settings: @device_settings, event: @latest } %>
+    <% else %>
+      <p class="text-gray-500">No device settings available yet. Connect to your Snoo to load the latest device snapshot.</p>
+    <% end %>
+  </div>
+
   <!-- Current Status -->
   <div class="bg-white shadow rounded-lg p-6 mb-6">
     <h2 class="text-xl font-semibold mb-4">Current Status</h2>

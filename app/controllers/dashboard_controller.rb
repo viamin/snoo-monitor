@@ -3,6 +3,9 @@ class DashboardController < ApplicationController
     @events = SnooEvent.order(event_time: :desc).limit(100)
     @latest = @events.first
     @connected = SnooConnectionManager.connected?
+    primary_device = SnooConnectionManager.devices.first
+    primary_serial = primary_device&.dig("awsIoT", "thingName") || primary_device&.[]("serialNumber")
+    @device_settings = primary_serial && SnooConnectionManager.device_settings[primary_serial]
   end
 
   def connect

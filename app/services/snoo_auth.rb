@@ -56,20 +56,82 @@ class SnooAuth
 
   def devices
     refresh! if token_expired?
-
-    conn = Faraday.new(url: SNOO_API_BASE) do |f|
-      f.request :json
-      f.response :json
-      f.headers["Authorization"] = "Bearer #{@id_token}"
-    end
-
-    resp = conn.get("/hds/me/v11/devices")
+    resp = api_connection.get("/hds/me/v11/devices")
     raise "Failed to fetch devices: #{resp.status}" unless resp.success?
 
     normalize_devices_response(resp.body)
   end
 
+  def device_settings(device)
+    refresh! if token_expired?
+
+    snapshot = {}
+    loaded_paths = []
+
+    settings_paths(device).each do |path|
+      resp = api_connection.get(path)
+      next if resp.status == 404
+
+      unless resp.success?
+        Rails.logger.info "[SnooAuth] Settings probe #{path} returned HTTP #{resp.status}"
+        next
+      end
+
+      next if resp.body.blank?
+
+      snapshot[path] = resp.body
+      loaded_paths << path
+      Rails.logger.info "[SnooAuth] Loaded device settings from #{path}"
+    end
+
+    return nil if snapshot.empty?
+
+    snapshot.merge("_endpoints" => loaded_paths)
+  rescue => e
+    Rails.logger.warn "[SnooAuth] Failed to fetch device settings: #{e.message}"
+    nil
+  end
+
   private
+
+  def api_connection
+    Faraday.new(url: SNOO_API_BASE) do |f|
+      f.request :json
+      f.response :json
+      f.headers["Authorization"] = "Bearer #{@id_token}"
+    end
+  end
+
+  def settings_paths(device)
+    v10_paths + candidate_paths(device)
+  end
+
+  def v10_paths
+    [
+      "/us/me/v10/settings",
+      "/us/me/v10/babies",
+      "/us/me/v10/me",
+      "/us/me/v10/devices"
+    ]
+  end
+
+  def candidate_paths(device)
+    ids = [
+      device["serialNumber"],
+      device["deviceId"],
+      device["id"],
+      device.dig("awsIoT", "thingName")
+    ].compact.uniq
+
+    ids.flat_map do |id|
+      [
+        "/hds/me/v11/devices/#{id}/settings",
+        "/hds/me/v11/devices/#{id}/preferences",
+        "/hds/me/v11/devices/#{id}/config",
+        "/hds/me/v11/devices/#{id}/profile"
+      ]
+    end
+  end
 
   def normalize_devices_response(body)
     case body

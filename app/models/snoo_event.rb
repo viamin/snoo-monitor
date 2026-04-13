@@ -43,6 +43,38 @@ class SnooEvent < ApplicationRecord
     self[:sw_version].presence || activity_state["sw_version"] || activity_state["swVersion"] || parsed_payload["firmwareVersion"]
   end
 
+  def resolved_device_name
+    parsed_payload["name"]
+  end
+
+  def resolved_system_state
+    activity_state["system_state"] || activity_state["systemState"]
+  end
+
+  def resolved_audio
+    state_machine["audio"]
+  end
+
+  def resolved_weaning
+    state_machine["weaning"]
+  end
+
+  def resolved_up_transition
+    state_machine["up_transition"] || state_machine["upTransition"]
+  end
+
+  def resolved_down_transition
+    state_machine["down_transition"] || state_machine["downTransition"]
+  end
+
+  def resolved_session_active
+    truthy_state?(state_machine["is_active_session"] || state_machine["isActiveSession"])
+  end
+
+  def resolved_presence_online
+    parsed_payload.dig("presenceIoT", "online")
+  end
+
   private
 
   def parsed_payload

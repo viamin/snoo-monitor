@@ -4,14 +4,15 @@ class SnooConnectionManager
       @instance ||= new
     end
 
-    delegate :connect!, :disconnect!, :connected?, :status, :devices, to: :instance
+    delegate :connect!, :disconnect!, :connected?, :status, :devices, :device_settings, to: :instance
   end
 
-  attr_reader :auth, :listener, :devices
+  attr_reader :auth, :listener, :devices, :device_settings
 
   def initialize
     @listeners = []
     @devices = []
+    @device_settings = {}
   end
 
   def connect!(username:, password:)
@@ -21,11 +22,13 @@ class SnooConnectionManager
     @auth.authenticate!
 
     @devices = @auth.devices
+    @device_settings = {}
     Rails.logger.info "[SnooManager] Found #{@devices.length} device(s)"
 
     @devices.each do |device|
       serial = device.dig("awsIoT", "thingName") || device["serialNumber"]
       Rails.logger.info "[SnooManager] Device: #{serial}"
+      @device_settings[serial] = @auth.device_settings(device)
 
       listener = SnooMqttListener.new(auth: @auth, device: device)
       listener.start do |event|
@@ -45,6 +48,7 @@ class SnooConnectionManager
     @listeners.each(&:stop)
     @listeners.clear
     @devices = []
+    @device_settings = {}
     @auth = nil
     broadcast_status("disconnected")
   end

@@ -1,0 +1,142 @@
+<%
+  settings ||= nil
+
+  find_in_hash = lambda do |payload, patterns|
+    case payload
+    when Hash
+      payload.each do |key, value|
+        return value if patterns.any? { |pattern| key.to_s.match?(pattern) }
+
+        nested = find_in_hash.call(value, patterns)
+        return nested unless nested.nil?
+      end
+    when Array
+      payload.each do |value|
+        nested = find_in_hash.call(value, patterns)
+        return nested unless nested.nil?
+      end
+    end
+
+    nil
+  end
+
+  display_value = lambda do |patterns, fallback|
+    value = settings.present? ? find_in_hash.call(settings, patterns) : nil
+    value.nil? || (value.respond_to?(:empty?) && value.empty?) ? fallback : value
+  end
+
+  format_setting = lambda do |value|
+    case value
+    when true then "On"
+    when false then "Off"
+    when String
+      value.sub(/\Alvl-/, "Level ").sub(/\Abaseline\z/i, "Baseline").tr("_", " ").split.map(&:capitalize).join(" ")
+    else
+      value
+    end
+  end
+
+  baby_settings = settings.present? ? find_in_hash.call(settings["/us/me/v10/babies"], [/\Asettings\z/i]) : nil
+  global_settings = settings.present? ? settings["/us/me/v10/settings"] : nil
+
+  device_name = display_value.call([/device.?name/i, /\Aname\z/i], event&.resolved_device_name)
+  online = settings.present? ? find_in_hash.call(settings, [/online/i, /connected/i]) : event&.resolved_presence_online
+  system_state = display_value.call([/system.?state/i], event&.resolved_system_state)
+  audio = display_value.call([/\Aaudio\z/i, /white.?noise/i], event&.resolved_audio&.upcase)
+  weaning = baby_settings&.dig("weaning")
+  motion_start = baby_settings&.dig("minimalLevel")
+  responsiveness = baby_settings&.dig("responsivenessLevel")
+  start_volume = baby_settings&.dig("minimalLevelVolume")
+  soothing_volume = baby_settings&.dig("soothingLevelVolume")
+  motion_limiter = baby_settings&.dig("motionLimiter")
+  car_ride_mode = baby_settings&.dig("carRideMode")
+  led_brightness = baby_settings&.dig("ledBrightnessScale")
+  daytime_start = baby_settings&.dig("daytimeStart") || global_settings&.dig("daytimeStart")
+  session_status = event&.resolved_session_active
+%>
+
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Device</div>
+    <div class="text-sm font-semibold"><%= device_name || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Online</div>
+    <div class="text-lg font-bold <%= online ? 'text-green-600' : 'text-gray-400' %>">
+      <%= online ? "Yes" : "No" %>
+    </div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">System</div>
+    <div class="text-lg font-bold"><%= system_state || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Audio</div>
+    <div class="text-lg font-bold"><%= audio || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Weaning</div>
+    <div class="text-lg font-bold"><%= format_setting.call(weaning) || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Start Level</div>
+    <div class="text-lg font-bold"><%= format_setting.call(motion_start) || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Responsiveness</div>
+    <div class="text-lg font-bold"><%= format_setting.call(responsiveness) || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Session</div>
+    <div class="text-lg font-bold <%= session_status ? 'text-blue-600' : 'text-gray-400' %>">
+      <%= session_status ? "Active" : "Idle" %>
+    </div>
+  </div>
+</div>
+
+<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="p-4 rounded <%= start_volume.present? ? 'bg-gray-50' : 'border border-dashed border-gray-200 bg-gray-50/50' %>">
+    <div class="text-sm text-gray-500 mb-1">Start Volume</div>
+    <div class="font-medium <%= start_volume.present? ? 'text-gray-900' : 'text-gray-400' %>"><%= format_setting.call(start_volume) || "Not available" %></div>
+  </div>
+
+  <div class="p-4 rounded <%= soothing_volume.present? ? 'bg-gray-50' : 'border border-dashed border-gray-200 bg-gray-50/50' %>">
+    <div class="text-sm text-gray-500 mb-1">Soothing Volume</div>
+    <div class="font-medium <%= soothing_volume.present? ? 'text-gray-900' : 'text-gray-400' %>"><%= format_setting.call(soothing_volume) || "Not available" %></div>
+  </div>
+
+  <div class="p-4 rounded <%= motion_limiter.nil? ? 'border border-dashed border-gray-200 bg-gray-50/50' : 'bg-gray-50' %>">
+    <div class="text-sm text-gray-500 mb-1">Motion Limiter</div>
+    <div class="font-medium <%= motion_limiter.nil? ? 'text-gray-400' : 'text-gray-900' %>"><%= motion_limiter.nil? ? "Not available" : format_setting.call(motion_limiter) %></div>
+  </div>
+</div>
+
+<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="p-4 rounded <%= car_ride_mode.nil? ? 'border border-dashed border-gray-200 bg-gray-50/50' : 'bg-gray-50' %>">
+    <div class="text-sm text-gray-500 mb-1">Car Ride Mode</div>
+    <div class="font-medium <%= car_ride_mode.nil? ? 'text-gray-400' : 'text-gray-900' %>"><%= car_ride_mode.nil? ? "Not available" : format_setting.call(car_ride_mode) %></div>
+  </div>
+
+  <div class="p-4 rounded <%= led_brightness.present? ? 'bg-gray-50' : 'border border-dashed border-gray-200 bg-gray-50/50' %>">
+    <div class="text-sm text-gray-500 mb-1">LED Brightness</div>
+    <div class="font-medium <%= led_brightness.present? ? 'text-gray-900' : 'text-gray-400' %>"><%= led_brightness || "Not available" %></div>
+  </div>
+
+  <div class="p-4 rounded <%= daytime_start.present? ? 'bg-gray-50' : 'border border-dashed border-gray-200 bg-gray-50/50' %>">
+    <div class="text-sm text-gray-500 mb-1">Daytime Start</div>
+    <div class="font-medium <%= daytime_start.present? ? 'text-gray-900' : 'text-gray-400' %>"><%= daytime_start.present? ? "#{daytime_start}:00" : "Not available" %></div>
+  </div>
+</div>
+
+<% if settings.present? %>
+  <div class="mt-4 text-xs text-gray-400">
+    Loaded via <span class="font-mono"><%= Array(settings["_endpoints"]).join(", ") %></span>
+  </div>
+<% end %>
