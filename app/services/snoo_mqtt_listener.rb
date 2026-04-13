@@ -28,6 +28,7 @@ class SnooMqttListener
     @thing_name = device.dig("awsIoT", "thingName") || device["serialNumber"]
     @endpoint = device.dig("awsIoT", "clientEndpoint")
     @device_identifier = device["serialNumber"] || device["deviceId"] || device["id"] || @thing_name
+    @state_poll_supported = true
   end
 
   def start(&on_event)
@@ -202,10 +203,16 @@ class SnooMqttListener
   end
 
   def fetch_state_payload(conn)
-    return nil if @device_identifier.blank?
+    return nil if @device_identifier.blank? || !@state_poll_supported
 
     resp = conn.get("/hds/me/v11/devices/#{@device_identifier}/state")
     return resp.body if resp.success? && resp.body.present?
+
+    if resp.status == 404
+      @state_poll_supported = false
+      Rails.logger.info "[SnooMQTT] Disabling direct state polling for #{@device_identifier} after HTTP 404"
+      return nil
+    end
 
     Rails.logger.warn "[SnooMQTT] State poll failed for #{@device_identifier}: HTTP #{resp.status}"
     nil

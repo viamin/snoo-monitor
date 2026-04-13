@@ -1,52 +1,52 @@
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">State</div>
-    <div class="text-2xl font-bold <%= event.state&.include?('LEVEL') ? 'text-blue-600' : 'text-gray-800' %>">
-      <%= event.state || "Unknown" %>
+    <div class="text-2xl font-bold <%= event.resolved_state&.include?('LEVEL') ? 'text-blue-600' : 'text-gray-800' %>">
+      <%= event.resolved_state || "Unknown" %>
     </div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">Level</div>
-    <div class="text-2xl font-bold"><%= event.level || "-" %></div>
+    <div class="text-2xl font-bold"><%= event.resolved_level || "-" %></div>
   </div>
 
-  <div class="text-center p-4 rounded <%= event.left_clip && event.right_clip ? 'bg-green-50' : 'bg-red-50' %>">
+  <div class="text-center p-4 rounded <%= event.resolved_left_clip && event.resolved_right_clip ? 'bg-green-50' : 'bg-red-50' %>">
     <div class="text-sm text-gray-500 mb-1">Safety Clips</div>
     <div class="text-lg font-bold">
-      <span class="<%= event.left_clip ? 'text-green-600' : 'text-red-600' %>">L:<%= event.left_clip ? 'OK' : 'OPEN' %></span>
+      <span class="<%= event.resolved_left_clip ? 'text-green-600' : 'text-red-600' %>">L:<%= event.resolved_left_clip ? 'OK' : 'OPEN' %></span>
       <span class="mx-1">/</span>
-      <span class="<%= event.right_clip ? 'text-green-600' : 'text-red-600' %>">R:<%= event.right_clip ? 'OK' : 'OPEN' %></span>
+      <span class="<%= event.resolved_right_clip ? 'text-green-600' : 'text-red-600' %>">R:<%= event.resolved_right_clip ? 'OK' : 'OPEN' %></span>
     </div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">Last Event</div>
-    <div class="text-lg font-bold"><%= event.event_type || "-" %></div>
-    <div class="text-xs text-gray-400"><%= event.event_time&.strftime("%H:%M:%S") %></div>
+    <div class="text-lg font-bold"><%= event.resolved_event_type || "-" %></div>
+    <div class="text-xs text-gray-400"><%= event.event_time&.in_time_zone&.strftime("%-l:%M:%S %p") %></div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">Hold</div>
-    <div class="text-lg font-bold <%= event.hold ? 'text-orange-600' : 'text-gray-400' %>">
-      <%= event.hold ? "ON" : "OFF" %>
+    <div class="text-lg font-bold <%= event.resolved_hold ? 'text-orange-600' : 'text-gray-400' %>">
+      <%= event.resolved_hold ? "ON" : "OFF" %>
     </div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">White Noise</div>
-    <div class="text-lg font-bold <%= event.sticky_white_noise ? 'text-blue-600' : 'text-gray-400' %>">
-      <%= event.sticky_white_noise ? "ON" : "OFF" %>
+    <div class="text-lg font-bold <%= event.resolved_sticky_white_noise ? 'text-blue-600' : 'text-gray-400' %>">
+      <%= event.resolved_sticky_white_noise ? "ON" : "OFF" %>
     </div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">Firmware</div>
-    <div class="text-sm font-mono"><%= event.sw_version || "-" %></div>
+    <div class="text-sm font-mono"><%= event.resolved_sw_version || "-" %></div>
   </div>
 
   <div class="text-center p-4 bg-gray-50 rounded">
     <div class="text-sm text-gray-500 mb-1">Device</div>
-    <div class="text-sm font-mono"><%= event.device_serial || "-" %></div>
+    <div class="text-sm font-mono"><%= event.resolved_device_serial || "-" %></div>
   </div>
 </div>
