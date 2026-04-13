@@ -241,7 +241,7 @@ class SnooMqttListener
     when Array
       body
     when Hash
-      return [body] if same_device?(body)
+      return [ body ] if same_device?(body)
 
       body.each_value do |value|
         unwrapped = unwrap_device_list(value)
