@@ -112,6 +112,78 @@ Notes:
 - Although this path appeared in Charles, direct API requests from this app returned `404`.
 - Device inventory is currently fetched successfully from `GET /hds/me/v11/devices`.
 
+## Observed Event Payload Shape
+
+Live event payloads currently observed by `SnooMqttListener` have this shape:
+
+```json
+{
+  "serialNumber": "device_serial",
+  "deviceType": 1,
+  "firmwareVersion": "v1.15.05",
+  "babyIds": [
+    "baby_id"
+  ],
+  "name": "device_name",
+  "presence": {
+    "online": true,
+    "since": "YYYY-MM-DDTHH:MM:SS.sssZ"
+  },
+  "presenceIoT": {
+    "online": true,
+    "since": "YYYY-MM-DDTHH:MM:SS.sssZ"
+  },
+  "awsIoT": {
+    "thingName": "family_device_thing_name",
+    "clientEndpoint": "example-ats.iot.us-east-1.amazonaws.com",
+    "awsRegion": "us-east-1",
+    "clientReady": true
+  },
+  "activityState": {
+    "event": "cry",
+    "event_time_ms": 1700000000000,
+    "iot_capable": true,
+    "left_safety_clip": 1,
+    "right_safety_clip": 1,
+    "rx_signal": {
+      "rssi": -45,
+      "strength": 100
+    },
+    "state_machine": {
+      "audio": "on",
+      "down_transition": "LEVEL2",
+      "hold": "off",
+      "is_active_session": "true",
+      "session_id": "session_id",
+      "since_session_start_ms": 159604,
+      "state": "LEVEL3",
+      "sticky_white_noise": "off",
+      "time_left": 240,
+      "up_transition": "LEVEL4",
+      "weaning": "off"
+    },
+    "sw_version": "v1.15.05",
+    "system_state": "normal"
+  },
+  "lastSSID": {
+    "name": "WiFi Name",
+    "updatedAt": "YYYY-MM-DDTHH:MM:SS.sssZ"
+  },
+  "provisionedAt": "YYYY-MM-DDTHH:MM:SS.sssZ"
+}
+```
+
+Important runtime fields:
+- Top level: `serialNumber`, `firmwareVersion`, `name`, `presence.online`, `presenceIoT.online`, `awsIoT.thingName`
+- `activityState`: `event`, `event_time_ms`, `left_safety_clip`, `right_safety_clip`, `sw_version`, `system_state`
+- `activityState.state_machine`: `state`, `up_transition`, `down_transition`, `hold`, `audio`, `sticky_white_noise`, `time_left`, `weaning`, `session_id`, `is_active_session`, `since_session_start_ms`
+
+Notes:
+- `event_time_ms` is in Unix epoch milliseconds.
+- `left_safety_clip` and `right_safety_clip` are currently observed as `1`/`0` style integers.
+- `state_machine.state` is observed as values like `ONLINE`, `BASELINE`, `LEVEL1`, `LEVEL2`, `LEVEL3`.
+- The same payload may be seen more than once in polling mode; the app now deduplicates repeated payloads by event signature before saving.
+
 ## Current Mapping In App
 
 The dashboard settings panel currently prefers:

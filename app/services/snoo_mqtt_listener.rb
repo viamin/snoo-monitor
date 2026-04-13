@@ -29,6 +29,7 @@ class SnooMqttListener
     @endpoint = device.dig("awsIoT", "clientEndpoint")
     @device_identifier = device["serialNumber"] || device["deviceId"] || device["id"] || @thing_name
     @state_poll_supported = true
+    @last_event_signature = nil
   end
 
   def start(&on_event)
@@ -143,6 +144,12 @@ class SnooMqttListener
 
     activity_state = data["activityState"] || data["activity_state"] || data
     state_machine = activity_state["state_machine"] || activity_state["stateMachine"] || data["state_machine"] || data["stateMachine"] || {}
+    signature = event_signature(data, activity_state, state_machine)
+
+    if signature == @last_event_signature
+      Rails.logger.info "[SnooMQTT] Skipping duplicate event #{signature}"
+      return
+    end
 
     event = SnooEvent.create!(
       device_serial: data["serialNumber"] || @thing_name,
@@ -158,6 +165,7 @@ class SnooMqttListener
       event_time: event_time_for(activity_state, data)
     )
 
+    @last_event_signature = signature
     @on_event&.call(event)
   rescue => e
     Rails.logger.error "[SnooMQTT] Failed to process message: #{e.message}"
@@ -179,6 +187,17 @@ class SnooMqttListener
   def normalize_level(state)
     match = state.to_s.match(/\ALEVEL(\d+)\z/)
     match ? match[1] : state
+  end
+
+  def event_signature(data, activity_state, state_machine)
+    [
+      data["serialNumber"] || @thing_name,
+      activity_state["event"] || activity_state["eventType"] || data["event"] || data["eventType"] || "status",
+      activity_state["event_time_ms"] || activity_state["eventTimeMs"] || data["event_time_ms"] || data["eventTimeMs"],
+      state_machine["state"] || activity_state["state"] || data["state"],
+      state_machine["session_id"] || state_machine["sessionId"],
+      activity_state["system_state"] || activity_state["systemState"]
+    ].join(":")
   end
 
   def fetch_poll_payload(conn)
