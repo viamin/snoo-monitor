@@ -10,13 +10,14 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_04_10_065317) do
+ActiveRecord::Schema[8.1].define(version: 2026_04_13_012000) do
   # These are extensions that must be enabled in order to support this database
   enable_extension "pg_catalog.plpgsql"
 
   create_table "snoo_events", force: :cascade do |t|
     t.datetime "created_at", null: false
     t.string "device_serial"
+    t.string "event_signature", null: false
     t.datetime "event_time"
     t.string "event_type"
     t.boolean "hold"
@@ -28,5 +29,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_04_10_065317) do
     t.boolean "sticky_white_noise"
     t.string "sw_version"
     t.datetime "updated_at", null: false
+    t.index ["event_signature"], name: "index_snoo_events_on_event_signature", unique: true
   end
 end

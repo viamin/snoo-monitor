@@ -16,7 +16,7 @@ class SnooConnectionManager
   end
 
   def connect!(username:, password:)
-    disconnect! if connected?
+    disconnect! if @listeners.any?
 
     @auth = SnooAuth.new(username: username, password: password)
     @auth.authenticate!

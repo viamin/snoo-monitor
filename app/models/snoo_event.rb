@@ -1,4 +1,32 @@
+require "digest"
+
 class SnooEvent < ApplicationRecord
+  def self.signature_for(attributes)
+    Digest::MD5.hexdigest(signature_components(attributes).join("|"))
+  end
+
+  def self.signature_components(attributes)
+    [
+      attributes[:device_serial],
+      attributes[:event_type],
+      signature_timestamp(attributes[:event_time]),
+      attributes[:state],
+      attributes[:level],
+      attributes[:hold],
+      attributes[:left_clip],
+      attributes[:right_clip],
+      attributes[:sticky_white_noise],
+      attributes[:sw_version],
+      attributes[:raw_payload]
+    ].map { |value| value.nil? ? "" : value.to_s }
+  end
+
+  def self.signature_timestamp(value)
+    return if value.blank?
+
+    value.in_time_zone("UTC").strftime("%Y-%m-%dT%H:%M:%S.%6NZ")
+  end
+
   def resolved_device_serial
     self[:device_serial].presence || parsed_payload["serialNumber"]
   end
