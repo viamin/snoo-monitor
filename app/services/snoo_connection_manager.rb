@@ -4,7 +4,7 @@ class SnooConnectionManager
       @instance ||= new
     end
 
-    delegate :connect!, :disconnect!, :connected?, :status, :devices, :device_settings, to: :instance
+    delegate :connect!, :disconnect!, :connected?, :status, :devices, :device_settings, :change_level!, :set_hold!, to: :instance
   end
 
   attr_reader :auth, :listener, :devices, :device_settings
@@ -65,10 +65,56 @@ class SnooConnectionManager
     end
   end
 
+  def change_level!(direction:, device_serial: nil)
+    ensure_connected!
+    apply_control_result(
+      SnooControl.new(auth: @auth, devices: @devices).change_level!(
+        direction: direction,
+        device_serial: device_serial
+      )
+    )
+  end
+
+  def set_hold!(hold:, device_serial: nil)
+    ensure_connected!
+    apply_control_result(
+      SnooControl.new(auth: @auth, devices: @devices).set_hold!(
+        hold: hold,
+        device_serial: device_serial
+      )
+    )
+  end
+
   private
+
+  def ensure_connected!
+    raise "Connect to Snoo before sending control commands." unless @auth.present? && @devices.any?
+  end
+
+  def apply_control_result(result)
+    @devices = result[:devices] if result[:devices].present?
+    event = result[:event]
+    return unless event
+
+    if result[:created]
+      broadcast_event_row(event)
+    end
+
+    broadcast_status_panel(event)
+  end
 
   def broadcast_event(event)
     previous_event = SnooEvent
+      .where("event_time < ? OR (event_time = ? AND id < ?)", event.event_time, event.event_time, event.id)
+      .order(event_time: :desc, id: :desc)
+      .first
+
+    broadcast_event_row(event, previous_event: previous_event)
+    broadcast_status_panel(event)
+  end
+
+  def broadcast_event_row(event, previous_event: nil)
+    previous_event ||= SnooEvent
       .where("event_time < ? OR (event_time = ? AND id < ?)", event.event_time, event.event_time, event.id)
       .order(event_time: :desc, id: :desc)
       .first
@@ -79,7 +125,9 @@ class SnooConnectionManager
         locals: { event: event, previous_event: previous_event }
       )
     })
+  end
 
+  def broadcast_status_panel(event)
     ActionCable.server.broadcast("snoo_events", {
       status_html: ApplicationController.render(
         partial: "dashboard/current_status",

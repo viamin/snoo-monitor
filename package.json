@@ -13,6 +13,7 @@
     "@hotwired/turbo-rails": "^8.0.23",
     "@rails/actioncable": "^8.1.300",
     "@tailwindcss/cli": "^4.2.2",
+    "mqtt": "^5.15.1",
     "tailwindcss": "^4.2.2"
   }
 }

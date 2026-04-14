@@ -4,9 +4,11 @@ class DashboardController < ApplicationController
     @latest = @events.first
     @connected = SnooConnectionManager.connected?
     @credentials_configured = snoo_credentials.values.all?(&:present?)
-    primary_device = SnooConnectionManager.devices.first
-    primary_serial = primary_device&.dig("awsIoT", "thingName") || primary_device&.[]("serialNumber")
-    @device_settings = primary_serial && SnooConnectionManager.device_settings[primary_serial]
+    @primary_device = SnooConnectionManager.devices.first
+    primary_key = @primary_device&.dig("awsIoT", "thingName") || @primary_device&.[]("serialNumber")
+    @device_settings = primary_key && SnooConnectionManager.device_settings[primary_key]
+    @control_state = resolved_control_state(@primary_device, @latest)
+    @control_hold = resolved_control_hold(@primary_device, @latest)
   end
 
   def connect
@@ -27,6 +29,24 @@ class DashboardController < ApplicationController
     redirect_to root_path, notice: "Disconnected from Snoo."
   end
 
+  def update_hold
+    hold = ActiveModel::Type::Boolean.new.cast(params[:hold])
+    SnooConnectionManager.set_hold!(hold: hold)
+
+    redirect_to root_path, notice: "Hold turned #{hold ? 'on' : 'off'}."
+  rescue => e
+    redirect_to root_path, alert: "Hold update failed: #{e.message}"
+  end
+
+  def change_level
+    direction = params[:direction].to_s
+    SnooConnectionManager.change_level!(direction: direction)
+
+    redirect_to root_path, notice: "Sent Snoo level #{direction} command."
+  rescue => e
+    redirect_to root_path, alert: "Level change failed: #{e.message}"
+  end
+
   private
 
   def snoo_credentials
@@ -34,5 +54,15 @@ class DashboardController < ApplicationController
       username: Rails.application.credentials.dig(:snoo, :username),
       password: Rails.application.credentials.dig(:snoo, :password)
     }
+  end
+
+  def resolved_control_state(device, event)
+    event&.resolved_state || device&.dig("activityState", "state_machine", "state") || device&.dig("activityState", "state")
+  end
+
+  def resolved_control_hold(device, event)
+    return event.resolved_hold unless event.nil?
+
+    SnooEvent.truthy_state_value?(device&.dig("activityState", "state_machine", "hold"))
   end
 end

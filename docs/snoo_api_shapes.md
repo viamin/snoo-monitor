@@ -192,3 +192,34 @@ The dashboard settings panel currently prefers:
 - `GET /us/me/v10/babies` for baby-specific Snoo settings
 - `GET /us/me/v10/settings` for account-level fallback values such as `daytimeStart`
 - event payloads as a fallback for runtime/device state
+
+## Runtime Control Commands
+
+The app's runtime controls use the device AWS IoT MQTT topic:
+
+- Topic: `<thingName>/state_machine/control`
+- Transport: MQTT over secure WebSocket to the device `awsIoT.clientEndpoint`
+
+Observed and referenced command payloads:
+
+```json
+{
+  "ts": 17760640870280000,
+  "command": "send_status"
+}
+```
+
+```json
+{
+  "ts": 17760640870280000,
+  "command": "go_to_state",
+  "state": "LEVEL1",
+  "hold": "on"
+}
+```
+
+Notes:
+- `ts` is sent as a large integer timestamp in 100 ns-style units (`Time.now.to_f * 10_000_000` in the app).
+- `go_to_state` is used for both direct state/level moves and hold toggles.
+- `hold` is sent as `"on"` or `"off"`.
+- The `send_status` command path was validated from this app on April 13, 2026 by publishing successfully against the live device MQTT endpoint.

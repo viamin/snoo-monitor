@@ -77,6 +77,12 @@
     </div>
   </div>
 
+  <%= render partial: "dashboard/controls", locals: {
+    connected: @connected,
+    current_state: @control_state,
+    current_hold: @control_hold
+  } %>
+
   <!-- Event Log -->
   <div class="bg-white shadow rounded-lg p-6">
     <div class="flex items-center justify-between mb-4">

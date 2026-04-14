@@ -1,8 +1,38 @@
 require "digest"
 
 class SnooEvent < ApplicationRecord
+  CONTROLLABLE_STATES = %w[ONLINE BASELINE LEVEL1 LEVEL2 LEVEL3 LEVEL4].freeze
+
   def self.signature_for(attributes)
     Digest::MD5.hexdigest(signature_components(attributes).join("|"))
+  end
+
+  def self.attributes_from_payload(data, device_serial_fallback: nil, raw_payload: nil)
+    activity_state = payload_activity_state(data)
+    state_machine = payload_state_machine(data, activity_state)
+    state = state_machine["state"] || activity_state["state"] || data["state"]
+
+    {
+      device_serial: data["serialNumber"] || device_serial_fallback,
+      event_type: activity_state["event"] || activity_state["eventType"] || data["event"] || data["eventType"] || "status",
+      state: state,
+      level: state_machine["level"] || normalize_level_value(state),
+      hold: truthy_state_value?(state_machine["hold"]),
+      left_clip: truthy_clip_value?(activity_state["left_safety_clip"] || activity_state["leftSafetyClip"] || data["left_safety_clip"] || data["leftSafetyClip"]),
+      right_clip: truthy_clip_value?(activity_state["right_safety_clip"] || activity_state["rightSafetyClip"] || data["right_safety_clip"] || data["rightSafetyClip"]),
+      sticky_white_noise: truthy_state_value?(state_machine["sticky_white_noise"] || state_machine["stickyWhiteNoise"]),
+      sw_version: activity_state["sw_version"] || activity_state["swVersion"] || data["sw_version"] || data["swVersion"] || data["firmwareVersion"],
+      raw_payload: payload_json_for(raw_payload || data),
+      event_time: event_time_from_payload(activity_state, data)
+    }
+  end
+
+  def self.persist_payload!(data, device_serial_fallback: nil, raw_payload: nil)
+    attributes = attributes_from_payload(data, device_serial_fallback: device_serial_fallback, raw_payload: raw_payload)
+    signature = signature_for(attributes)
+    event = create_with(attributes).create_or_find_by!(event_signature: signature)
+
+    [ event, event.previously_new_record? ]
   end
 
   def self.signature_components(attributes)
@@ -25,6 +55,36 @@ class SnooEvent < ApplicationRecord
     return if value.blank?
 
     value.in_time_zone("UTC").strftime("%Y-%m-%dT%H:%M:%S.%6NZ")
+  end
+
+  def self.event_time_from_payload(activity_state, data)
+    timestamp_ms = activity_state["event_time_ms"] || activity_state["eventTimeMs"] || data["event_time_ms"] || data["eventTimeMs"]
+    timestamp_ms ? Time.at(timestamp_ms.to_i / 1000.0) : Time.current
+  end
+
+  def self.payload_activity_state(data)
+    data["activityState"] || data["activity_state"] || data
+  end
+
+  def self.payload_state_machine(data, activity_state = payload_activity_state(data))
+    activity_state["state_machine"] || activity_state["stateMachine"] || data["state_machine"] || data["stateMachine"] || {}
+  end
+
+  def self.truthy_state_value?(value)
+    value.to_s == "on" || value.to_s == "true"
+  end
+
+  def self.truthy_clip_value?(value)
+    value.to_s == "1" || value == true
+  end
+
+  def self.normalize_level_value(state)
+    match = state.to_s.match(/\ALEVEL(\d+)\z/)
+    match ? match[1] : state
+  end
+
+  def self.payload_json_for(payload)
+    payload.is_a?(String) ? payload : payload.to_json
   end
 
   def resolved_device_serial
@@ -120,15 +180,14 @@ class SnooEvent < ApplicationRecord
   end
 
   def truthy_state?(value)
-    value.to_s == "on" || value.to_s == "true"
+    self.class.truthy_state_value?(value)
   end
 
   def truthy_clip?(value)
-    value.to_s == "1" || value == true
+    self.class.truthy_clip_value?(value)
   end
 
   def normalize_level(state)
-    match = state.to_s.match(/\ALEVEL(\d+)\z/)
-    match ? match[1] : state
+    self.class.normalize_level_value(state)
   end
 end
