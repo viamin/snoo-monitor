@@ -7,7 +7,7 @@ The app currently:
 - authenticates against the Snoo APIs using stored Rails credentials or manual login
 - fetches device metadata and baby/settings data from the observed API endpoints
 - receives live updates through the app's listener path and stores normalized events in Postgres
-- can send experimental runtime control commands for hold and adjacent level changes
+- can send experimental runtime control commands for hold, adjacent level changes, and sticky white noise
 - shows current device status, recent event history, raw payloads, and selected settings in the dashboard
 
 ## Requirements

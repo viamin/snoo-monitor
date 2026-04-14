@@ -4,7 +4,7 @@ class SnooConnectionManager
       @instance ||= new
     end
 
-    delegate :connect!, :disconnect!, :connected?, :status, :devices, :device_settings, :change_level!, :set_hold!, to: :instance
+    delegate :connect!, :disconnect!, :connected?, :status, :devices, :device_settings, :change_level!, :set_hold!, :set_white_noise!, to: :instance
   end
 
   attr_reader :auth, :listener, :devices, :device_settings
@@ -85,6 +85,16 @@ class SnooConnectionManager
     )
   end
 
+  def set_white_noise!(enabled:, device_serial: nil)
+    ensure_connected!
+    apply_control_result(
+      SnooControl.new(auth: @auth, devices: @devices).set_white_noise!(
+        enabled: enabled,
+        device_serial: device_serial
+      )
+    )
+  end
+
   private
 
   def ensure_connected!
@@ -131,7 +141,7 @@ class SnooConnectionManager
     ActionCable.server.broadcast("snoo_events", {
       status_html: ApplicationController.render(
         partial: "dashboard/current_status",
-        locals: { event: event }
+        locals: { event: event, connected: connected? }
       )
     })
   end

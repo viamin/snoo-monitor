@@ -1,5 +1,6 @@
 class SnooControl
   STATE_ORDER = SnooEvent::CONTROLLABLE_STATES.freeze
+  WHITE_NOISE_TIMEOUT_MINUTES = 15
   COMMAND_WAIT_INTERVAL = 0.75
   COMMAND_WAIT_ATTEMPTS = 4
 
@@ -45,16 +46,31 @@ class SnooControl
     )
   end
 
+  def set_white_noise!(enabled:, device_serial: nil, timeout_minutes: WHITE_NOISE_TIMEOUT_MINUTES)
+    device = device_for(device_serial)
+    refresh_auth!
+
+    publish_command!(
+      device: device,
+      command: "set_sticky_white_noise",
+      state: enabled ? "on" : "off",
+      timeout_min: timeout_minutes
+    )
+
+    sync_device_state!(
+      device_identifier: device_identifier_for(device)
+    ) do |event|
+      event.resolved_sticky_white_noise == enabled
+    end
+  end
+
   private
 
   def send_go_to_state!(device:, target_state:, hold:)
     refresh_auth!
 
-    SnooMqttCommandClient.new(
-      endpoint: device.dig("awsIoT", "clientEndpoint"),
-      token: @auth.id_token,
-      thing_name: device.dig("awsIoT", "thingName")
-    ).publish!(
+    publish_command!(
+      device: device,
       ts: mqtt_timestamp,
       command: "go_to_state",
       state: target_state,
@@ -62,13 +78,21 @@ class SnooControl
     )
 
     sync_device_state!(
-      device_identifier: device_identifier_for(device),
-      expected_state: target_state,
-      expected_hold: hold
-    )
+      device_identifier: device_identifier_for(device)
+    ) do |event|
+      event.resolved_state == target_state && event.resolved_hold == hold
+    end
   end
 
-  def sync_device_state!(device_identifier:, expected_state:, expected_hold:)
+  def publish_command!(device:, **payload)
+    SnooMqttCommandClient.new(
+      endpoint: device.dig("awsIoT", "clientEndpoint"),
+      token: @auth.id_token,
+      thing_name: device.dig("awsIoT", "thingName")
+    ).publish!({ ts: mqtt_timestamp }.merge(payload))
+  end
+
+  def sync_device_state!(device_identifier:)
     last_event = nil
     created = false
 
@@ -82,7 +106,7 @@ class SnooControl
         device_serial_fallback: device.dig("awsIoT", "thingName")
       )
 
-      if last_event.resolved_state == expected_state && last_event.resolved_hold == expected_hold
+      if !block_given? || yield(last_event)
         return { event: last_event, created: created, devices: @devices }
       end
 

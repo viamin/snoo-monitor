@@ -1,52 +1,114 @@
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">State</div>
-    <div class="text-2xl font-bold <%= event.resolved_state&.include?('LEVEL') ? 'text-blue-600' : 'text-gray-800' %>">
-      <%= event.resolved_state || "Unknown" %>
+<%
+  connected = local_assigns.fetch(:connected, false)
+  current_state = event&.resolved_state
+  current_index = SnooControl::STATE_ORDER.index(current_state)
+  can_lower = connected && current_index.present? && current_index.positive?
+  can_raise = connected && current_index.present? && current_index < SnooControl::STATE_ORDER.length - 1
+  hold_on = event&.resolved_hold || false
+  white_noise_on = event&.resolved_sticky_white_noise || false
+
+  toggle_button_classes = lambda do |enabled, accent_classes|
+    base = "group relative inline-flex h-7 w-12 items-center rounded-full border transition"
+    enabled ? "#{base} #{accent_classes} border-transparent" : "#{base} bg-gray-200 border-gray-300 hover:bg-gray-300"
+  end
+
+  toggle_knob_classes = lambda do |enabled|
+    base = "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition"
+    enabled ? "#{base} translate-x-6" : "#{base} translate-x-1"
+  end
+%>
+
+<% if event.present? %>
+  <div class="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div class="text-center p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-1">State</div>
+      <div class="text-2xl font-bold <%= event.resolved_state&.include?('LEVEL') ? 'text-blue-600' : 'text-gray-800' %>">
+        <%= event.resolved_state || "Unknown" %>
+      </div>
+    </div>
+
+    <div class="p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-1">Level</div>
+      <div class="flex items-center justify-between gap-3">
+        <div class="text-2xl font-bold"><%= event.resolved_level || "-" %></div>
+        <div class="flex gap-2">
+          <%= form_with url: snoo_level_path, method: :post do %>
+            <button type="submit" name="direction" value="down"
+                    class="rounded px-3 py-1.5 text-sm font-medium text-white <%= can_lower ? 'bg-slate-700 hover:bg-slate-800' : 'bg-slate-300 cursor-not-allowed' %>"
+                    <%= can_lower ? nil : 'disabled' %>>
+              Lower
+            </button>
+          <% end %>
+
+          <%= form_with url: snoo_level_path, method: :post do %>
+            <button type="submit" name="direction" value="up"
+                    class="rounded px-3 py-1.5 text-sm font-medium text-white <%= can_raise ? 'bg-blue-600 hover:bg-blue-700' : 'bg-blue-300 cursor-not-allowed' %>"
+                    <%= can_raise ? nil : 'disabled' %>>
+              Raise
+            </button>
+          <% end %>
+        </div>
+      </div>
+    </div>
+
+    <div class="text-center p-4 rounded <%= event.resolved_left_clip && event.resolved_right_clip ? 'bg-green-50' : 'bg-red-50' %>">
+      <div class="text-sm text-gray-500 mb-1">Safety Clips</div>
+      <div class="text-lg font-bold">
+        <span class="<%= event.resolved_left_clip ? 'text-green-600' : 'text-red-600' %>">L:<%= event.resolved_left_clip ? 'OK' : 'OPEN' %></span>
+        <span class="mx-1">/</span>
+        <span class="<%= event.resolved_right_clip ? 'text-green-600' : 'text-red-600' %>">R:<%= event.resolved_right_clip ? 'OK' : 'OPEN' %></span>
+      </div>
+    </div>
+
+    <div class="text-center p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-1">Last Event</div>
+      <div class="text-lg font-bold"><%= event.resolved_event_type || "-" %></div>
+      <div class="text-xs text-gray-400"><%= event.event_time&.in_time_zone&.strftime("%-l:%M:%S %p") %></div>
+    </div>
+
+    <div class="p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-3">Hold</div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm font-medium <%= hold_on ? 'text-orange-600' : 'text-gray-500' %>"><%= hold_on ? "Enabled" : "Disabled" %></span>
+        <%= form_with url: snoo_hold_path, method: :post do %>
+          <button type="submit" name="hold" value="<%= hold_on ? 'false' : 'true' %>"
+                  aria-label="Toggle hold"
+                  class="<%= toggle_button_classes.call(hold_on, 'bg-orange-500 hover:bg-orange-600') %>">
+            <span class="<%= toggle_knob_classes.call(hold_on) %>"></span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-3">White Noise</div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-sm font-medium <%= white_noise_on ? 'text-blue-600' : 'text-gray-500' %>"><%= white_noise_on ? "Enabled" : "Disabled" %></span>
+        <%= form_with url: snoo_white_noise_path, method: :post do %>
+          <button type="submit" name="enabled" value="<%= white_noise_on ? 'false' : 'true' %>"
+                  aria-label="Toggle white noise"
+                  class="<%= toggle_button_classes.call(white_noise_on, 'bg-blue-500 hover:bg-blue-600') %>">
+            <span class="<%= toggle_knob_classes.call(white_noise_on) %>"></span>
+          </button>
+        <% end %>
+      </div>
+    </div>
+
+    <div class="text-center p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-1">Firmware</div>
+      <div class="text-sm font-mono"><%= event.resolved_sw_version || "-" %></div>
+    </div>
+
+    <div class="text-center p-4 bg-gray-50 rounded">
+      <div class="text-sm text-gray-500 mb-1">Device</div>
+      <div class="text-sm font-mono"><%= event.resolved_device_serial || "-" %></div>
     </div>
   </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">Level</div>
-    <div class="text-2xl font-bold"><%= event.resolved_level || "-" %></div>
+<% else %>
+  <div class="rounded-lg bg-gray-50 p-4">
+    <p class="text-gray-500">No events received yet. Connect to your Snoo to start monitoring.</p>
+    <% if connected %>
+      <p class="mt-2 text-xs text-gray-400">Controls will appear here after the first device status event arrives.</p>
+    <% end %>
   </div>
-
-  <div class="text-center p-4 rounded <%= event.resolved_left_clip && event.resolved_right_clip ? 'bg-green-50' : 'bg-red-50' %>">
-    <div class="text-sm text-gray-500 mb-1">Safety Clips</div>
-    <div class="text-lg font-bold">
-      <span class="<%= event.resolved_left_clip ? 'text-green-600' : 'text-red-600' %>">L:<%= event.resolved_left_clip ? 'OK' : 'OPEN' %></span>
-      <span class="mx-1">/</span>
-      <span class="<%= event.resolved_right_clip ? 'text-green-600' : 'text-red-600' %>">R:<%= event.resolved_right_clip ? 'OK' : 'OPEN' %></span>
-    </div>
-  </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">Last Event</div>
-    <div class="text-lg font-bold"><%= event.resolved_event_type || "-" %></div>
-    <div class="text-xs text-gray-400"><%= event.event_time&.in_time_zone&.strftime("%-l:%M:%S %p") %></div>
-  </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">Hold</div>
-    <div class="text-lg font-bold <%= event.resolved_hold ? 'text-orange-600' : 'text-gray-400' %>">
-      <%= event.resolved_hold ? "ON" : "OFF" %>
-    </div>
-  </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">White Noise</div>
-    <div class="text-lg font-bold <%= event.resolved_sticky_white_noise ? 'text-blue-600' : 'text-gray-400' %>">
-      <%= event.resolved_sticky_white_noise ? "ON" : "OFF" %>
-    </div>
-  </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">Firmware</div>
-    <div class="text-sm font-mono"><%= event.resolved_sw_version || "-" %></div>
-  </div>
-
-  <div class="text-center p-4 bg-gray-50 rounded">
-    <div class="text-sm text-gray-500 mb-1">Device</div>
-    <div class="text-sm font-mono"><%= event.resolved_device_serial || "-" %></div>
-  </div>
-</div>
+<% end %>

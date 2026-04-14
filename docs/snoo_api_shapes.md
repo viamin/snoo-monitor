@@ -218,8 +218,18 @@ Observed and referenced command payloads:
 }
 ```
 
+```json
+{
+  "ts": 17760640870280000,
+  "command": "set_sticky_white_noise",
+  "state": "on",
+  "timeout_min": 15
+}
+```
+
 Notes:
 - `ts` is sent as a large integer timestamp in 100 ns-style units (`Time.now.to_f * 10_000_000` in the app).
 - `go_to_state` is used for both direct state/level moves and hold toggles.
+- `set_sticky_white_noise` appears to accept `state: "on" | "off"` and a `timeout_min` integer.
 - `hold` is sent as `"on"` or `"off"`.
 - The `send_status` command path was validated from this app on April 13, 2026 by publishing successfully against the live device MQTT endpoint.

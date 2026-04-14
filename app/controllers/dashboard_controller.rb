@@ -7,8 +7,6 @@ class DashboardController < ApplicationController
     @primary_device = SnooConnectionManager.devices.first
     primary_key = @primary_device&.dig("awsIoT", "thingName") || @primary_device&.[]("serialNumber")
     @device_settings = primary_key && SnooConnectionManager.device_settings[primary_key]
-    @control_state = resolved_control_state(@primary_device, @latest)
-    @control_hold = resolved_control_hold(@primary_device, @latest)
   end
 
   def connect
@@ -47,6 +45,15 @@ class DashboardController < ApplicationController
     redirect_to root_path, alert: "Level change failed: #{e.message}"
   end
 
+  def update_white_noise
+    enabled = ActiveModel::Type::Boolean.new.cast(params[:enabled])
+    SnooConnectionManager.set_white_noise!(enabled: enabled)
+
+    redirect_to root_path, notice: "White noise turned #{enabled ? 'on' : 'off'}."
+  rescue => e
+    redirect_to root_path, alert: "White noise update failed: #{e.message}"
+  end
+
   private
 
   def snoo_credentials
@@ -54,15 +61,5 @@ class DashboardController < ApplicationController
       username: Rails.application.credentials.dig(:snoo, :username),
       password: Rails.application.credentials.dig(:snoo, :password)
     }
-  end
-
-  def resolved_control_state(device, event)
-    event&.resolved_state || device&.dig("activityState", "state_machine", "state") || device&.dig("activityState", "state")
-  end
-
-  def resolved_control_hold(device, event)
-    return event.resolved_hold unless event.nil?
-
-    SnooEvent.truthy_state_value?(device&.dig("activityState", "state_machine", "hold"))
   end
 end

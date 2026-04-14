@@ -69,19 +69,9 @@
   <div class="bg-white shadow rounded-lg p-6 mb-6">
     <h2 class="text-xl font-semibold mb-4">Current Status</h2>
     <div id="current-status" data-snoo-target="currentStatus">
-      <% if @latest %>
-        <%= render partial: "dashboard/current_status", locals: { event: @latest } %>
-      <% else %>
-        <p class="text-gray-500">No events received yet. Connect to your Snoo to start monitoring.</p>
-      <% end %>
+      <%= render partial: "dashboard/current_status", locals: { event: @latest, connected: @connected } %>
     </div>
   </div>
-
-  <%= render partial: "dashboard/controls", locals: {
-    connected: @connected,
-    current_state: @control_state,
-    current_hold: @control_hold
-  } %>
 
   <!-- Event Log -->
   <div class="bg-white shadow rounded-lg p-6">
