@@ -88,42 +88,54 @@
   </div>
 
   <!-- Event Log -->
-  <div class="bg-white shadow rounded-lg p-6">
-    <div class="flex items-center justify-between mb-4">
-      <h2 class="text-xl font-semibold">Event Log</h2>
-      <span class="text-sm text-gray-500" data-snoo-target="eventCount">
-        <%= @events.size %> events
-      </span>
-    </div>
+  <%= turbo_frame_tag "event_log", data: { turbo_action: "advance" } do %>
+    <div class="bg-white shadow rounded-lg p-6">
+      <div data-snoo-target="pageState"
+           data-page="<%= @pagy.page %>"
+           data-page-size="<%= @pagy.limit %>"></div>
 
-    <div class="overflow-x-auto">
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-200 text-left text-gray-600">
-            <th class="py-2 px-3">Time</th>
-            <th class="py-2 px-3">Gap</th>
-            <th class="py-2 px-3">Event</th>
-            <th class="py-2 px-3">State</th>
-            <th class="py-2 px-3">Level</th>
-            <th class="py-2 px-3">Hold</th>
-            <th class="py-2 px-3">L Clip</th>
-            <th class="py-2 px-3">R Clip</th>
-            <th class="py-2 px-3">White Noise</th>
-          </tr>
-        </thead>
-        <tbody id="event-log" data-snoo-target="eventLog">
-          <% @events.each_with_index do |event, index| %>
-            <%= render partial: "dashboard/event_row", locals: { event: event, previous_event: @events[index + 1] } %>
-          <% end %>
-        </tbody>
-      </table>
-    </div>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-semibold">Event Log</h2>
+        <span class="text-sm text-gray-500" data-snoo-target="eventCount">
+          Page <%= @pagy.page %> of <%= @pagy.pages %> • <%= @events.size %> events shown
+        </span>
+      </div>
 
-    <!-- Raw Payload Viewer -->
-    <div class="mt-6">
-      <h3 class="text-lg font-semibold mb-2">Raw Payload</h3>
-      <pre id="raw-payload" data-snoo-target="rawPayload"
-           class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto max-h-96 overflow-y-auto font-mono"><% if @latest&.raw_payload %><%= JSON.pretty_generate(JSON.parse(@latest.raw_payload)) rescue @latest.raw_payload %><% else %>Waiting for events...<% end %></pre>
+      <div class="overflow-x-auto">
+        <table class="min-w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-200 text-left text-gray-600">
+              <th class="py-2 px-3">Time</th>
+              <th class="py-2 px-3">Gap</th>
+              <th class="py-2 px-3">Event</th>
+              <th class="py-2 px-3">State</th>
+              <th class="py-2 px-3">Level</th>
+              <th class="py-2 px-3">Hold</th>
+              <th class="py-2 px-3">L Clip</th>
+              <th class="py-2 px-3">R Clip</th>
+              <th class="py-2 px-3">White Noise</th>
+            </tr>
+          </thead>
+          <tbody id="event-log" data-snoo-target="eventLog">
+            <% @events.each_with_index do |event, index| %>
+              <%= render partial: "dashboard/event_row", locals: { event: event, previous_event: @events[index + 1] } %>
+            <% end %>
+          </tbody>
+        </table>
+      </div>
+
+      <% if @pagy.pages > 1 %>
+        <div class="mt-4 flex justify-center">
+          <%= raw @pagy.series_nav %>
+        </div>
+      <% end %>
+
+      <!-- Raw Payload Viewer -->
+      <div class="mt-6">
+        <h3 class="text-lg font-semibold mb-2">Raw Payload</h3>
+        <pre id="raw-payload" data-snoo-target="rawPayload"
+             class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto max-h-96 overflow-y-auto font-mono"><% if @latest&.raw_payload %><%= JSON.pretty_generate(JSON.parse(@latest.raw_payload)) rescue @latest.raw_payload %><% else %>Waiting for events...<% end %></pre>
+      </div>
     </div>
-  </div>
+  <% end %>
 </div>

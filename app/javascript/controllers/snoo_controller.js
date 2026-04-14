@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import { createConsumer } from "@rails/actioncable"
 
 export default class extends Controller {
-  static targets = ["connectionStatus", "currentStatus", "eventLog", "eventCount", "rawPayload"]
+  static targets = ["connectionStatus", "currentStatus", "eventLog", "eventCount", "rawPayload", "pageState"]
 
   connect() {
     this.consumer = createConsumer()
@@ -18,11 +18,16 @@ export default class extends Controller {
 
   handleMessage(data) {
     if (data.html) {
-      this.eventLogTarget.insertAdjacentHTML("afterbegin", data.html)
+      if (this.currentPage() === 1) {
+        this.eventLogTarget.insertAdjacentHTML("afterbegin", data.html)
 
-      // Update event count
-      const rows = this.eventLogTarget.querySelectorAll("tr")
-      this.eventCountTarget.textContent = `${rows.length} events`
+        while (this.eventLogTarget.querySelectorAll("tr").length > this.currentPageSize()) {
+          this.eventLogTarget.lastElementChild?.remove()
+        }
+
+        const rows = this.eventLogTarget.querySelectorAll("tr")
+        this.eventCountTarget.textContent = `Page 1 • ${rows.length} events shown`
+      }
     }
 
     if (data.status_html) {
@@ -54,5 +59,13 @@ export default class extends Controller {
         this.rawPayloadTarget.textContent = raw
       }
     }
+  }
+
+  currentPage() {
+    return this.hasPageStateTarget ? Number(this.pageStateTarget.dataset.page || 1) : 1
+  }
+
+  currentPageSize() {
+    return this.hasPageStateTarget ? Number(this.pageStateTarget.dataset.pageSize || 15) : 15
   }
 }

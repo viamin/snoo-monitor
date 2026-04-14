@@ -1,7 +1,8 @@
 class DashboardController < ApplicationController
   def index
-    @events = SnooEvent.order(event_time: :desc).limit(100)
-    @latest = @events.first
+    events_scope = SnooEvent.order(event_time: :desc)
+    @pagy, @events = pagy(events_scope, limit: 15)
+    @latest = events_scope.first
     @connected = SnooConnectionManager.connected?
     @credentials_configured = snoo_credentials.values.all?(&:present?)
     @primary_device = SnooConnectionManager.devices.first

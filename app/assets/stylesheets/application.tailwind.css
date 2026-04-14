@@ -1,1 +1,62 @@
 @import "tailwindcss";
+
+@layer components {
+  .pagy {
+    --B: 1;
+    --H: 214;
+    --S: 56%;
+    --L: 58%;
+    --A: 1;
+    --spacing: 0.125rem;
+    --padding: 0.75rem;
+    --rounding: 0.75rem;
+    --border-width: 0rem;
+    --font-size: 0.875rem;
+    --font-weight: 600;
+    --line-height: 1.5;
+
+    --text:               hsl(var(--H) var(--S) calc(var(--L) - (25 * var(--B))) / var(--A));
+    --text-hover:         hsl(var(--H) var(--S) calc(var(--L) - (30 * var(--B))) / var(--A));
+    --text-current:       hsl(var(--H) var(--S) calc(100 * (var(--B) + 1)) / var(--A));
+    --background:         hsl(var(--H) var(--S) calc(var(--L) + (30 * var(--B))) / var(--A));
+    --background-hover:   hsl(var(--H) var(--S) calc(var(--L) + (20 * var(--B))) / var(--A));
+    --background-current: hsl(var(--H) var(--S) var(--L) / var(--A));
+    --background-input:   hsl(var(--H) var(--S) calc(var(--L) + (45 * var(--B))) / var(--A));
+
+    @apply flex flex-wrap items-center justify-center gap-x-[var(--spacing)] gap-y-2 font-[var(--font-weight)]
+    text-[length:var(--font-size)] text-[var(--text)] leading-[var(--line-height)];
+
+    a:not([role="separator"]) {
+      @apply block rounded-[var(--rounding)] px-[var(--padding)] py-[calc(var(--padding)/3)] bg-[var(--background)]
+      border-solid border-[var(--background-current)] border-[length:var(--border-width)] shadow-sm transition;
+    }
+
+    a[href]:hover {
+      @apply bg-[var(--background-hover)] text-[var(--text-hover)];
+    }
+
+    a:not([href]) {
+      @apply cursor-default;
+    }
+
+    a[role="link"]:not([aria-current]) {
+      @apply opacity-60;
+    }
+
+    a[aria-current] {
+      @apply bg-[var(--background-current)] text-[var(--text-current)];
+    }
+
+    label {
+      @apply inline-block whitespace-nowrap rounded-[var(--rounding)] px-[var(--padding)]
+      py-[calc(var(--padding)/3-var(--border-width))]
+      bg-[var(--background)] border-solid border-[length:var(--border-width)] border-[var(--background-current)];
+
+      input {
+        @apply rounded-[calc(var(--rounding)/2)] border-[length:var(--border-width)] border-[var(--background-current)]
+        bg-[var(--background-input)] text-[length:var(--font-size)] font-[var(--font-weight)]
+        text-[var(--text)] leading-[var(--line-height)];
+      }
+    }
+  }
+}

@@ -53,6 +53,8 @@
   led_brightness = baby_settings&.dig("ledBrightnessScale")
   daytime_start = baby_settings&.dig("daytimeStart") || global_settings&.dig("daytimeStart")
   session_status = event&.resolved_session_active
+  firmware = event&.resolved_sw_version
+  device_serial = event&.resolved_device_serial
 %>
 
 <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -99,9 +101,19 @@
       <%= session_status ? "Active" : "Idle" %>
     </div>
   </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Firmware</div>
+    <div class="text-sm font-mono"><%= firmware || "-" %></div>
+  </div>
+
+  <div class="text-center p-4 bg-gray-50 rounded">
+    <div class="text-sm text-gray-500 mb-1">Device ID</div>
+    <div class="text-sm font-mono"><%= device_serial || "-" %></div>
+  </div>
 </div>
 
-<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+<div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">
   <div class="p-4 rounded <%= start_volume.present? ? 'bg-gray-50' : 'border border-dashed border-gray-200 bg-gray-50/50' %>">
     <div class="text-sm text-gray-500 mb-1">Start Volume</div>
     <div class="font-medium <%= start_volume.present? ? 'text-gray-900' : 'text-gray-400' %>"><%= format_setting.call(start_volume) || "Not available" %></div>
@@ -116,9 +128,6 @@
     <div class="text-sm text-gray-500 mb-1">Motion Limiter</div>
     <div class="font-medium <%= motion_limiter.nil? ? 'text-gray-400' : 'text-gray-900' %>"><%= motion_limiter.nil? ? "Not available" : format_setting.call(motion_limiter) %></div>
   </div>
-</div>
-
-<div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
   <div class="p-4 rounded <%= car_ride_mode.nil? ? 'border border-dashed border-gray-200 bg-gray-50/50' : 'bg-gray-50' %>">
     <div class="text-sm text-gray-500 mb-1">Car Ride Mode</div>
     <div class="font-medium <%= car_ride_mode.nil? ? 'text-gray-400' : 'text-gray-900' %>"><%= car_ride_mode.nil? ? "Not available" : format_setting.call(car_ride_mode) %></div>

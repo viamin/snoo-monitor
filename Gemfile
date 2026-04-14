@@ -58,5 +58,6 @@ end
 
 gem "aws-sdk-cognitoidentityprovider", "~> 1.138"
 gem "mqtt", "~> 0.7.0"
+gem "pagy"
 
 gem "faraday", "~> 2.14"
