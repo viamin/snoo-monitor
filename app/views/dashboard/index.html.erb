@@ -57,12 +57,26 @@
 
   <!-- Device Settings -->
   <div class="bg-white shadow rounded-lg p-6 mb-6">
-    <h2 class="text-xl font-semibold mb-4">Device Settings</h2>
-    <% if @device_settings || @latest %>
-      <%= render partial: "dashboard/device_settings", locals: { settings: @device_settings, event: @latest } %>
-    <% else %>
-      <p class="text-gray-500">No device settings available yet. Connect to your Snoo to load the latest device snapshot.</p>
-    <% end %>
+    <details class="group">
+      <summary class="flex cursor-pointer list-none items-center justify-between gap-4">
+        <div>
+          <h2 class="text-xl font-semibold">Device Settings</h2>
+          <p class="text-sm text-gray-500">Collapsed by default to keep the live controls and event stream in view.</p>
+        </div>
+        <span class="rounded-full bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 transition group-open:bg-gray-200">
+          <span class="group-open:hidden">Show</span>
+          <span class="hidden group-open:inline">Hide</span>
+        </span>
+      </summary>
+
+      <div class="mt-4">
+        <% if @device_settings || @latest %>
+          <%= render partial: "dashboard/device_settings", locals: { settings: @device_settings, event: @latest } %>
+        <% else %>
+          <p class="text-gray-500">No device settings available yet. Connect to your Snoo to load the latest device snapshot.</p>
+        <% end %>
+      </div>
+    </details>
   </div>
 
   <!-- Current Status -->
