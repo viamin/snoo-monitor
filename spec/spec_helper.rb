@@ -1,3 +1,9 @@
+require "simplecov"
+
+SimpleCov.start "rails" do
+  enable_coverage :branch
+end
+
 require "webmock/rspec"
 
 WebMock.disable_net_connect!(allow_localhost: true)
