@@ -61,7 +61,7 @@ group :development do
   gem "web-console"
 end
 
-gem "aws-sdk-cognitoidentityprovider", "~> 1.138"
+gem "aws-sdk-cognitoidentityprovider", "~> 1.139"
 gem "mqtt", "~> 0.7.0"
 gem "pagy"
 
